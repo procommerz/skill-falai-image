@@ -1,46 +1,87 @@
 # fal.ai Image Generation
 
-A [Cursor Agent Skill](https://cursor.com/docs/agent/skills) for generating and editing images with [fal.ai](https://fal.ai). It targets production assets for web design, product UI, games, icons, sprites, textures, mockups, and transparent PNG cutouts.
+A [Claude Code skill](https://code.claude.com/docs/en/skills) for generating and editing images with [fal.ai](https://fal.ai). Claude uses it to produce web, UI, game, icon, sprite, texture, mockup, and transparent PNG assets through the bundled CLI.
 
-The skill teaches an agent how to pick models, write production prompts, and run the bundled CLI. Image only — no video, audio, or 3D.
+Image only — no video, audio, or 3D.
 
-## What it does
+## What Claude can do with this skill
 
-- **Generate** images from text prompts (`nano-banana-2`, `nano-banana-pro`, and related models)
+- **Generate** images from text (`nano-banana-2`, `nano-banana-pro`, and related models)
 - **Edit** existing images with prompt-guided changes
 - **Remove backgrounds** with `rembg`
-- **Create transparent PNGs** via a two-step generate-on-flat-background → rembg workflow
+- **Create transparent PNGs** via generate-on-flat-background → rembg
 - **Download outputs** into your project asset folder
+
+Claude loads the skill automatically when your request matches the description in `SKILL.md`, or you can invoke it directly with `/fal-ai-image-gen`.
 
 ## Install
 
-Clone or copy this repository into a Cursor skills directory:
+Clone this repository, then install the skill directory where Claude Code looks for skills. The folder name must match the skill name: `fal-ai-image-gen`.
 
 | Scope | Path |
 |-------|------|
-| Personal (all projects) | `~/.cursor/skills/fal-ai-image-gen/` |
-| Project (this repo only) | `.cursor/skills/fal-ai-image-gen/` |
+| Personal (all projects) | `~/.claude/skills/fal-ai-image-gen/` |
+| Project (shared via git) | `.claude/skills/fal-ai-image-gen/` |
 
-The skill is loaded from `SKILL.md`. Invoke it in chat with `$fal-ai-image-gen` or ask the agent to use the fal.ai image generation skill.
+Example — personal install:
+
+```bash
+git clone https://github.com/procommerz/skill-falai-image.git ~/.claude/skills/fal-ai-image-gen
+```
+
+Or symlink a local checkout:
+
+```bash
+ln -s /path/to/fal-ai-image-gen ~/.claude/skills/fal-ai-image-gen
+```
+
+Claude Code watches these directories and picks up edits to `SKILL.md` during the session. Start a new session if you create the skills folder for the first time.
 
 ## Requirements
 
+- **Claude Code** with skills enabled
 - **Python 3.11+** — the CLI uses only the standard library
-- **fal.ai API key** — set `FAL_KEY` in the environment or in a `.env` file in your working directory:
-
-```bash
-export FAL_KEY="your-fal-api-key"
-```
+- **fal.ai API key** — set `FAL_KEY` in the environment or in a `.env` file in your working directory or in `.claude/settings.json`.
 
 Get a key at [fal.ai/dashboard/keys](https://fal.ai/dashboard/keys).
 
-## Quick start
+## Use in Claude Code
 
-From the skill directory:
+Start Claude Code in a project where you want assets:
+
+```bash
+claude
+```
+
+Then either invoke the skill directly:
+
+```text
+/fal-ai-image-gen Create a transparent health potion sprite for a mobile fantasy game
+```
+
+Or ask naturally — Claude should load the skill when you mention fal.ai image generation, sprites, icons, mockups, background removal, and similar tasks:
+
+```text
+Generate a 16:9 SaaS hero image with fal.ai and save it to ./assets/generated
+```
+
+Claude runs `scripts/fal_image.py` from the skill directory, waits for each generation to finish, and returns Markdown image previews plus local file paths.
+
+## CLI reference
+
+The bundled script talks to fal's queue REST API. You can run it yourself to test the skill outside Claude Code:
+
+```bash
+python3 ${CLAUDE_SKILL_DIR}/scripts/fal_image.py --help
+```
+
+When testing from the skill directory directly:
 
 ```bash
 python3 scripts/fal_image.py --help
 ```
+
+### Examples
 
 Generate a hero image:
 
@@ -63,7 +104,7 @@ python3 scripts/fal_image.py edit \
   --download-dir ./assets/generated
 ```
 
-Create a transparent game asset (generate on white, then remove background):
+Create a transparent game asset:
 
 ```bash
 python3 scripts/fal_image.py transparent \
@@ -73,7 +114,7 @@ python3 scripts/fal_image.py transparent \
   --download-dir ./assets/generated
 ```
 
-Remove a background from an existing image:
+Remove a background:
 
 ```bash
 python3 scripts/fal_image.py rembg \
@@ -81,7 +122,7 @@ python3 scripts/fal_image.py rembg \
   --download-dir ./assets/generated
 ```
 
-## CLI commands
+### Commands
 
 | Command | Description |
 |---------|-------------|
@@ -95,7 +136,7 @@ python3 scripts/fal_image.py rembg \
 
 Common flags: `--model`, `--aspect-ratio`, `--resolution` (`1K` / `2K` / `4K`), `--output-format` (`png` / `jpeg` / `webp`), `--download-dir`, `--num-images`, `--seed`.
 
-Model aliases include `nano-banana-2`, `nano-banana-pro`, `nano-banana-edit`, `rem-bg`, and `rembg`. Full fal endpoint IDs also work.
+Model aliases: `nano-banana-2`, `nano-banana-pro`, `nano-banana-edit`, `rem-bg`, `rembg`. Full fal endpoint IDs also work.
 
 ## Models
 
@@ -121,23 +162,15 @@ If white appears in the subject, switch to a contrasting flat color (e.g. cyan o
 
 ```
 fal-ai-image-gen/
-├── SKILL.md              # Agent instructions (primary skill file)
+├── SKILL.md              # Claude Code skill instructions
 ├── README.md             # This file
 ├── agents/
-│   └── openai.yaml       # ChatGPT agent interface metadata
+│   └── openai.yaml       # Optional metadata for other agent platforms
 └── scripts/
     └── fal_image.py      # fal.ai queue API CLI
 ```
 
-## Agent usage notes
-
-When an agent runs the CLI:
-
-- Wait for each command to finish; do not redirect or detach output (streaming updates may break).
-- Prefer parallel tool calls for multiple independent generations rather than one shell script with many runs.
-- Return results with Markdown image tags, the fal URL, model used, and local download path.
-
-See `SKILL.md` for prompt patterns, aspect-ratio defaults, and full workflow guidance.
+`SKILL.md` is the source of truth for Claude: model selection, prompt patterns, aspect-ratio defaults, and output handoff. Read it if you want to customize behavior or fork the skill.
 
 ## Author
 
